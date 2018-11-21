@@ -1,0 +1,45 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html;charset=utf-8"> 
+
+<title>mandelbrot</title>
+
+<script type="text/javascript" src="../Common/webgl-utils.js"></script>
+<script type="text/javascript" src="../Common/initShaders.js"></script>
+<script type="text/javascript" src="../Common/MV.js"></script>
+<script type="text/javascript" src="../Common/Utils/Trackball.js"></script>
+<script type="text/javascript" src="../Common/Utils/Camera.js"></script>
+<script type="text/javascript" src="../Common/Utils/Object.js"></script>
+<script type="text/javascript" src="../Common/Utils/Utils.js"></script>
+<script type="text/javascript" src="mandelbrot.js"></script> 
+
+<script id="vertex-shader" type="x-shader/x-vertex">
+precision highp float;
+
+attribute vec4 vPosition;
+attribute vec4 vColor;
+
+varying vec4 fColor;
+
+void main(){
+	gl_Position = vPosition;
+	fColor = vColor;
+}
+</script>
+
+<script id="fragment-shader" type="x-shader/x-fragment">
+precision highp float;
+varying vec4 fColor;
+
+void main(){
+    gl_FragColor = fColor;
+}
+</script>
+</head>
+<body>
+   <canvas id="gl-canvas" width="512" height="512">
+    HTML5 Canvas not supported!
+   </canvas>
+</body>
+</html>
+

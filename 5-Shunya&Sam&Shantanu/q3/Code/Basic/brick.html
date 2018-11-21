@@ -1,0 +1,109 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html;charset=utf-8"> 
+
+<title>Lighting - Sphere</title>
+
+<script type="text/javascript" src="../Common/webgl-utils.js"></script>
+<script type="text/javascript" src="../Common/initShaders.js"></script>
+<script type="text/javascript" src="../Common/MV.js"></script>
+<script type="text/javascript" src="../Common/Utils/Trackball.js"></script>
+<script type="text/javascript" src="../Common/Utils/Camera.js"></script>
+<script type="text/javascript" src="../Common/Utils/Object.js"></script>
+<script type="text/javascript" src="../Common/Utils/Utils.js"></script>
+<script type="text/javascript" src="brick.js"></script> 
+
+<script id="vertex-shader" type="x-shader/x-vertex">
+attribute vec4 vPosition;
+
+void main(){
+	gl_Position = vPosition;
+}
+</script>
+
+<script id="fragment-shader" type="x-shader/x-fragment">
+precision mediump float;
+
+
+// make a diffuse map
+vec4 diffuse(){
+	vec2 pos = gl_FragCoord.xy / 512.0 * 2.0;
+	vec4 brickColor = vec4(0.6, 0.16, 0.15, 1.0);
+	vec4 mortarColor = vec4(0.4, 0.5, 0.6, 1.0);
+
+	// horizontal mortar
+	if (mod(pos.y, 0.09) < 0.01){
+		return mortarColor;
+	}
+	
+	// vertical mortar
+	else if (mod(pos.y/0.09, 2.0) <= 1.0 && mod(pos.x, 0.25) <= 0.01){
+		return mortarColor;
+	}
+
+	// vertical mortar that starts from halfway
+	else if (mod(pos.y/0.09, 2.0) > 1.0 && mod(pos.x+0.125, 0.25) <= 0.01){
+		return mortarColor;
+	}
+
+	// brick
+	return brickColor;
+}
+
+// make a normal map
+vec4 normal(){
+	vec2 pos = gl_FragCoord.xy / 512.0*2.0;
+	float pi = 3.141592;
+
+	// smooth function: y = x || y = -x
+
+	// horizontal mortar
+	if (mod(pos.y, 0.09) <= 0.01){
+		if (mod(pos.y, 0.09) <= 0.005){
+			// positive y
+			return vec4(0.0, 1.0/sqrt(2.0), 1.0/sqrt(2.0), 1.0);
+		} else {
+			// negative y
+			return vec4(0.0, -1.0/sqrt(2.0), 1.0/sqrt(2.0), 1.0);
+		}
+	}
+
+	// vertical mortar
+	else if (mod(pos.y/0.09, 2.0) <= 1.0 && mod(pos.x, 0.25) <= 0.01){
+		if (mod(pos.x, 0.25) < 0.005){
+			// positive x
+			return vec4(1.0/sqrt(2.0), 0.0, 1.0/sqrt(2.0), 1.0);
+		} else {
+			// negative x
+			return vec4(-1.0/sqrt(2.0), 0.0, 1.0/sqrt(2.0), 1.0);
+		}
+	}
+
+	// vertical mortar that starts from halfway
+	else if (mod(pos.y/0.09, 2.0) > 1.0 && mod(pos.x+0.125, 0.25) <= 0.01){
+		if (mod(pos.x+0.125, 0.25) < 0.005){
+			// positive x
+			return vec4(1.0/sqrt(2.0), 0.0, 1.0/sqrt(2.0), 1.0);
+		} else {
+			// negative x
+			return vec4(-1.0/sqrt(2.0), 0.0, 1.0/sqrt(2.0), 1.0);
+		}
+	}
+
+	// brick
+	return vec4(0.0, 0.0, 1.0, 1.0);
+}
+
+void main(){
+	//gl_FragColor = diffuse();
+	gl_FragColor = normal();
+}
+</script>
+</head>
+<body>
+   <canvas id="gl-canvas" width="512" height="512">
+    HTML5 Canvas not supported!
+   </canvas>
+</body>
+</html>
+

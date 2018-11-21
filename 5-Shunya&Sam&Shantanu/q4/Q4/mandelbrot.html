@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html;charset=utf-8"> 
+	<title>Mandelbrot</title>
+
+	<script src="../Common/webgl-utils.js"></script>
+	<script src="../Common/initShaders.js"></script>
+	<script src="../Common/MV.js"></script>
+	<script src="mandelbrot.js"></script>
+	<script id="vertex-shader" type="x-shader/x-vertex">
+		attribute vec4 vPosition;
+		varying vec2 position;
+		void main(){
+			position = vPosition.xy;
+			gl_Position = vPosition;
+		}
+	</script>
+	<script id="fragment-shader" type="x-shader/x-fragment">
+
+		/*With some reference to https://giansass.com/blog/mandelbrot-set-part-1-overview/ */
+
+		precision mediump float;
+		varying vec2 position;
+		const float MAX_N = 300.0;
+		/*Royal blue RGBA(65, 105, 225, 1)*/
+		vec4 fillcol = vec4(0.254, 0.411, 1.0, 1.0);
+		void main(){
+			vec2 zn = vec2(0, 0);
+			vec2 c = vec2(position.x - 0.5, position.y);
+			float n = MAX_N;
+			for (int i = 0; i < int(MAX_N); i++ ) {
+				float tmp_x = zn.x;
+				float tmp_y = zn.y;
+				zn.x = (tmp_x * tmp_x - tmp_y * tmp_y ) + c.x;
+				zn.y = (tmp_y * tmp_x + tmp_x * tmp_y ) + c.y;
+				if (length(zn) > 2.0) {
+					n = float(i);
+					break;
+				}
+
+			}
+
+			if (n < MAX_N) {
+				gl_FragColor = vec4( n*n/(MAX_N*MAX_N), n*n/(MAX_N*MAX_N), min(n*1.2/MAX_N, 1.0), 1.0 );
+			} else {
+				gl_FragColor = fillcol; 
+			}
+		}
+	</script>
+
+
+</head>
+<body>
+<canvas id="gl-canvas" width="1024" height="1024">
+	HTML5 Canvas not supported!
+</canvas>
+</body>
+</html>
