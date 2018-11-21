@@ -17,7 +17,6 @@ function getLocations(Attributes, Uniforms){
   }
 
   L.enableAttributes = function(){
-  	console.log(Attributes.length);
   	for(var i=0;i<Attributes.length;++i){
   		gl.enableVertexAttribArray(L[Attributes[i]]);
   	}
