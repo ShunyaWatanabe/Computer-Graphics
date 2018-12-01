@@ -59,9 +59,9 @@ window.onload = function init() {
 	// set light source
 	var Light = {
 		position: vec3(-5,10,20),
-		Ia: vec3(0.2, 0.2, 0.2),
-		Id: vec3(1,1,1),
-		Is: vec3(0.8,0.8,0.8)
+		Ia: vec3(1, 1, 1),
+		Id: vec3(0,0,0),
+		Is: vec3(1,1,1)
 	};
 
 	gl.uniform3fv( Locations.lightPosition, flatten(Light.position) );
@@ -249,6 +249,8 @@ function Sphere(n){
 
 
 var rabbit = {
+	diffuseMap: "rabbitDiffuse.jpg",
+	//normalMap: "rabbitNormal.jpg",
 	positions : [
 		[0.046182, 0.271041, 0.067853],
 		[0.043974, 0.290585, 0.01802],

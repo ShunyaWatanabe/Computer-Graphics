@@ -1,42 +1,33 @@
-function getLocations(Attributes, Uniforms, program){
-
-  // if program is not specified, use the currently active program
-  if(!program){ program = gl.getParameter(gl.CURRENT_PROGRAM); }
+function getLocations(Attributes, Uniforms){
+  // assumes program is a global variable
 
   var L = {}; // object to be returned
-  var A = []; // stores locations of attributes defined in the shader program
 
   var i, name, loc;
-  
   for(i=0;i<Attributes.length;++i){
   	name = Attributes[i];
   	loc = gl.getAttribLocation(program, name);
-	if(loc!=-1) {
-		L[name] = loc;
-		A.push(loc); 
-	}
+	L[name] = loc;
   }
 
   for(i=0; i<Uniforms.length; ++i ){
   	name = Uniforms[i];
   	loc = gl.getUniformLocation(program, name);
-  	if(loc!=null) {
-  		L[name] = loc;
-  	}
+  	L[name] = loc;
   }
 
   L.enableAttributes = function(){
-  	for(var i=0;i<A.length;++i){
-  		gl.enableVertexAttribArray(A[i]);
+  	for(var i=0;i<Attributes.length;++i){
+  		gl.enableVertexAttribArray(L[Attributes[i]]);
   	}
   }
 
   L.disableAttributes = function(){
-  	for(var i=0;i<A.length;++i){
-  		gl.disableVertexAttribArray(A[i]);
+  	for(var i=0;i<Attributes.length;++i){
+  		gl.disableVertexAttribArray(L[Attributes[i]]);
   	}
   }
-  
+
   return L;
 }
 
@@ -68,6 +59,4 @@ function degrees(theta){
 function clone(obj){
 	return JSON.parse(JSON.stringify(obj));
 }
-
-
 

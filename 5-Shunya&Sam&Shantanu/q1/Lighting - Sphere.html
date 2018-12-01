@@ -103,7 +103,6 @@ vec4 computeColor(vec3 position, vec3 normal) {
 	return vec4(color, 1.0);
 }
 
-
 void main(){
 	if(shading == 3.0){ // Phong
 		gl_FragColor = computeColor(fPosition, normalize(fNormal));
