@@ -178,24 +178,18 @@ vec3 shade(vec3 position, vec3 normal, vec3 viewDir, material mat, object obj, f
 		vec3 b = normalize(position-obj.c);
 		vec3 c = vec3(1,0,0); // rightwards vector
 		vec3 d = vec3(b.x, 0, b.z);
-		float theta = acos(dot(a, b)/(length(a)+length(b)));
-		float phi = acos(dot(c, d)/(length(d)+length(c)));
-		color = vec3(theta, phi, 0.0);
-		float s = theta/180.0;
-		float t = phi/180.0;
+		float theta = acos(dot(a, b));
+		float phi = acos(dot(c, d));
+		float pi = 3.1415926535;
+		float halfPi = 3.1415926535/2.0;
+		float t = theta/pi;
+		float s = 1.0 - phi/pi;
 		if (b.z < 0.0){
-			t = 180.0-phi/180.0;
+			s = phi/pi;
 		}
-		if (s > 1.0){
-			color = vec3(1.0, 0.0, 0.0);
-		} else {
-			color = vec3(0.0, 1.0, 0.0);
-		}
-		/*
-		s = mod(s + time/100.0, 1.0);
+		s = mod(s + time/5.0, 1.0);
 		vec2 coord = vec2(s, t);
 		color = texture2D(mySampler, coord).xyz;
-		*/
 	}
 
 	vec3 final_color = vec3(0,0,0);
