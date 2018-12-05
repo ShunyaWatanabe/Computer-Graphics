@@ -1,0 +1,9 @@
+All homework(s) done by:
+
+Sam Meyers,
+Shantanu Bhatia,
+Shunya Watanabe,
+
+in collaboration.
+
+For server, http-server from npm is used.

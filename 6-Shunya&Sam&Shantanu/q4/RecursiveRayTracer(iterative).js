@@ -191,6 +191,8 @@ function pixelRay(i,j){
 	raydir = add(raydir, scale(vcomp, v));
 	raydir = add(raydir, scale(wcomp, w));;
 
+	console.log(raydir);
+
 	return { e: Camera.location, d: normalize(raydir)}; 
 }
 

@@ -1,0 +1,357 @@
+<html>
+    <head>
+        <script type="text/javascript" src="../Common/MV.js"></script>
+        <script type="text/javascript" src="../Common/webgl-utils.js"></script>
+        <script type="text/javascript" src="../Common/initshaders.js"></script>
+        <script type="text/javascript" src="RecursiveRayTracer (Animated).js"></script>
+        <script id="vertex-shader" type="x-shader/x-vertex">
+            
+precision highp float;
+
+attribute vec4 vPosition;
+varying vec4 fPostion;
+uniform float now;
+uniform sampler2D mySampler;
+
+void main(){
+	gl_Position = vPosition;
+	fPostion = vPosition;
+}
+
+        </script>
+        <script id="fragment-shader" type="x-shader/x-fragment">
+            
+precision highp float;
+
+varying vec4 fPostion;
+uniform float now;
+uniform sampler2D mySampler;
+
+float nx = 512.0; 			// width of image in pixels
+float ny = 512.0; 			// height of image in pixels
+
+vec3 ambient_light = vec3(0.1,0.1,0.1);
+vec3 background_color = vec3(0,0,0);
+
+struct object {
+	int type; // 1: circle
+  	vec3 c;
+  	float r;
+  	int material_id;
+};
+
+struct light {
+  	vec3 position;
+  	vec3 color; 
+  	float intensity;
+};
+
+struct material {
+  	vec3 color;
+  	float reflectivity;
+  	int shininess;
+};
+
+struct camera{
+  	vec3 location;
+  	vec3 up;
+  	vec3 lookat;
+  	float fov;  // field of view in degrees
+};
+
+object Objects[4];
+light Lights[2];
+material Materials[4];
+camera Camera;
+
+void createObjects(){
+	Objects[0] = object(1, vec3(-0.6,0.6,1.5), 0.2, 0);
+	Objects[1] = object(1, vec3(   0,  0,  0), 1.0, 1);
+	Objects[2] = object(1, vec3( -1,-0.3,1.5), 0.3, 2);
+	Objects[3] = object(1, vec3( 0.5,  0,1.5), 0.1, 3);	
+}
+
+void createLights(){
+	Lights[0] = light(vec3(0,10,0), vec3(1,1,1), 0.6);
+	Lights[1] = light(vec3(0,0,10), vec3(1,1,1), 0.5);
+}
+
+void createMaterials(){
+	Materials[0] = material(vec3(1.0,0.0,0.0), 0.2, 100);
+	Materials[1] = material(vec3(0.8,0.8,0.8), 0.8, 2000);
+	Materials[2] = material(vec3(0.1,0.7,0.2), 0.1, 150);
+	Materials[3] = material(vec3(0.6,0.1,0.1), 0.1, 50);	
+}
+
+void createCamera(){
+	Camera = camera(vec3 (0,0,3.6), vec3(0,1, 0), vec3(0,0,0), 60.0);
+}
+
+void create(){
+	createObjects();
+	createLights();
+	createMaterials();
+	createCamera(); 
+}
+
+struct PixelRay{
+	vec3 e;
+	vec3 d;
+};
+
+struct H{
+	object obj;
+	vec3 point;
+	float t;
+};
+
+vec3 trace(PixelRay ray, float time);
+vec3 shade(vec3 position, vec3 normal, vec3 viewDir, material mat, object obj, float time);
+H hit(PixelRay ray);
+PixelRay pixelRay(float i, float j);
+float intersect(PixelRay ray, object obj);
+vec3 computeNormal(object obj, vec3 point);
+
+vec3 trace(PixelRay ray, float time){
+
+    vec3 normal, viewDir, reflected_dir, reflected_ray, reflected_col;
+    material mat; 
+
+	vec3 color = background_color;
+	H h = hit(ray);
+	
+	if (h.t == 1.0/0.0){
+		return color;
+	}
+
+	normal = computeNormal(h.obj, h.point); 
+	for (int i=0; i<4; i++){
+		if (h.obj.material_id == i){
+		  mat = Materials[i];
+		  break;
+		}	
+	}
+
+	material original_mat = mat;
+	viewDir = -1.0 * ray.d;
+	color = shade(h.point, normal, viewDir, mat, h.obj, time);
+
+	for (int i=0; i<2; i++){
+		reflected_dir = ray.d + -2.0*dot(ray.d, normal)*normal; 
+		ray.e = h.point; ray.d = reflected_dir;
+		h = hit(ray);
+		if (h.t < 1.0/0.0){
+			normal = computeNormal(h.obj, h.point); 
+			for (int i=0; i<4; i++){
+				if (h.obj.material_id == i){
+					mat = Materials[i]; 
+					break;
+				}	
+			}
+			viewDir = -1.0*ray.d;
+			reflected_col = shade(h.point, normal, viewDir, mat, h.obj, time);
+		} else {
+			reflected_col = background_color;
+			color = color + mat.reflectivity * reflected_col;
+			return color;
+		}
+	    color = color + original_mat.reflectivity * reflected_col;
+	}
+	
+	return color;
+}
+
+vec3 shade(vec3 position, vec3 normal, vec3 viewDir, material mat, object obj, float time){
+	
+	light l;
+	PixelRay shadowRay;
+	float diffuseIntensity, specularIntensity;
+	vec3 toLight, lightDir;
+	vec3 halfvector;
+	int shininess = mat.shininess;
+
+	vec3 color = mat.color;
+	
+	if (obj.material_id == 0){
+		// change the color to texture color
+		vec3 a = vec3(0,1,0); // upwards vector
+		vec3 b = normalize(position-obj.c);
+		vec3 c = vec3(1,0,0); // rightwards vector
+		vec3 d = vec3(b.x, 0, b.z);
+		float theta = acos(dot(a, b)/(length(a)+length(b)));
+		float phi = acos(dot(c, d)/(length(d)+length(c)));
+		color = vec3(theta, phi, 0.0);
+		float s = theta/180.0;
+		float t = phi/180.0;
+		if (b.z < 0.0){
+			t = 180.0-phi/180.0;
+		}
+		if (s > 1.0){
+			color = vec3(1.0, 0.0, 0.0);
+		} else {
+			color = vec3(0.0, 1.0, 0.0);
+		}
+		/*
+		s = mod(s + time/100.0, 1.0);
+		vec2 coord = vec2(s, t);
+		color = texture2D(mySampler, coord).xyz;
+		*/
+	}
+
+	vec3 final_color = vec3(0,0,0);
+	vec3 diffuse = ambient_light ;//ambient_light is undefined
+	vec3 specular = vec3(0,0,0);
+	
+	for(int i = 0; i < 4; ++i){
+    	l = Lights[i];
+      	toLight = l.position - position;
+      	lightDir = normalize(toLight);
+
+      	shadowRay.e = position;
+      	shadowRay.d = lightDir;  
+      	if(hit(shadowRay).t > length(toLight)){ 
+        	diffuseIntensity = l.intensity*max(dot(lightDir, normal),0.0);
+			diffuse = diffuse + diffuseIntensity*l.color; 
+			halfvector = normalize(viewDir + lightDir);
+			specularIntensity = pow(max(dot(halfvector, normal),0.0),float(shininess));
+			specular = specular + specularIntensity * l.color;
+      	}
+	}
+
+	final_color = final_color + diffuse*color;
+	final_color = final_color + specular;
+
+	return final_color;
+}
+
+H hit(PixelRay ray){
+  
+  	float x; 
+  	object obj; float t = 1.0/0.0; vec3 loc;
+  	H ret;
+
+  	for(int i = 0; i < 4; ++i){
+		x = intersect(ray, Objects[i]);
+		if(x >= 0.0 && x < t){
+		  	obj = Objects[i];
+		  	t = x;
+		}
+  	}
+  
+  	if(t < 1.0/0.0){
+    	loc = ray.e + t*ray.d;
+  	}
+  
+  	ret = H(obj, loc, t);
+  	return ret;
+}
+
+float rand(float i, float j, float k){
+    return mod(mod(i*k, j*8.390), 1.0);
+}
+
+PixelRay pixelRay(float i, float j, float seed){
+  	// return the ray from camera through (i,j)^th pixel
+  	// i,j increase to right and down as in a picture 
+
+  	j = float(ny) - j; // invert j
+
+	float n = 1.0; 			// distance to near plane i.e., projection plane
+	float aspect = nx/ny; 	// aspect = width/height
+	float fov_radians = Camera.fov*3.1415926535/180.0;
+	float t = n*tan(fov_radians/2.0);
+	float r = t*aspect;
+	float b = -t, l = -r;
+
+	// compute camera basis 
+	vec3 w = normalize(Camera.location - Camera.lookat);
+	vec3 u = normalize(cross(Camera.up,w));
+	vec3 v = cross(w,u);
+
+	float ucomp = l + (r-l)*(i+rand(i, j, seed))/nx;
+	float vcomp = b + (t-b)*(j+rand(i, j, seed))/ny;
+	float wcomp = -n;
+
+	vec3 raydir = ucomp*u;
+	raydir = raydir + vcomp*v;
+	raydir = raydir + wcomp*w;
+
+	PixelRay ret = PixelRay(Camera.location, normalize(raydir));
+	return ret; 
+}
+
+float intersect(PixelRay ray, object obj){
+  	if(obj.type == 1){
+		float t, t1, t2;
+		vec3 x = ray.e - obj.c;
+		float A = dot(ray.d, ray.d);
+		float B = 2.0*dot(x, ray.d);
+		float C = dot(x,x) - obj.r*obj.r;
+		float D = B*B - 4.0*A*C;
+		t = 1.0/0.0;
+		if(D >= 0.0){
+      		float S = sqrt(D);
+      		t1 = (-B - S)/(2.0*A);
+      		t2 = (-B + S)/(2.0*A);
+      		if(t1 >= 0.0){
+          		t = t1;
+      		}
+      		if(t2 >= 0.0 && t2<t1){
+      	    	t = t2;
+      		}
+    	}
+    	return t;
+  	}
+  	return 1.0/0.0;
+}
+
+vec3 computeNormal(object obj, vec3 point){
+  	if(obj.type == 1){
+    	return normalize(point - obj.c);
+  	}
+}
+
+void main(){
+	create();
+
+	float i,j;
+	vec3 color;
+
+	float theta = now;
+
+	float r = sqrt(2.5);
+	Objects[3].c = vec3(r*sin(theta), 0, r*cos(theta));
+	Objects[2].r = 0.1*sin(theta)+0.2;
+
+	i = (fPostion.x+1.0)*nx/2.0;
+	j = (fPostion.y+1.0)*ny/2.0;
+
+	PixelRay ray1 = pixelRay(i, j, 76800351.0); // third argument is the seed for RNG
+	PixelRay ray2 = pixelRay(i, j,  5903582.0);
+	PixelRay ray3 = pixelRay(i, j, 32257629.0);
+	PixelRay ray4 = pixelRay(i, j, 68852954.0);
+	PixelRay ray5 = pixelRay(i, j,   364060.0);
+	PixelRay ray6 = pixelRay(i, j, 70188170.0);
+	PixelRay ray7 = pixelRay(i, j, 12869200.0);
+	PixelRay ray8 = pixelRay(i, j, 76304128.0);
+	
+	vec3 color1 = trace(ray1, now);
+	vec3 color2 = trace(ray2, now);
+	vec3 color3 = trace(ray3, now);
+	vec3 color4 = trace(ray4, now);
+	vec3 color5 = trace(ray5, now);
+	vec3 color6 = trace(ray6, now);
+	vec3 color7 = trace(ray7, now);
+	vec3 color8 = trace(ray8, now);
+	color = (color1 + color2 + color3 + color4 + color5 + color6 + color7 + color8) / 8.0;
+	
+	gl_FragColor = vec4(color.xyz, 1.0);
+}
+
+        </script>
+    </head>
+    <body>
+        <canvas id="gl-canvas" width="512" height="512">HTML5 Canvas not supported!
+   </canvas>
+    </body>
+</html>
