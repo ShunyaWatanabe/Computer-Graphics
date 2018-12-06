@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html;charset=utf-8" > 
+
+<title>Moss Terrain</title>
+
+
+<script id="vertex-shader" type="x-shader/x-vertex">
+precision mediump float;
+
+attribute vec4 vPosition;
+attribute vec2 vTexCoord;
+
+varying vec2 fTexCoord;
+varying vec4 fPosition;
+
+uniform mat4 M, TB, VP;
+
+uniform vec3 Ka, Kd, Ks, Ia, Id, Is, lightPosition, cameraPosition;
+uniform float shininess;
+
+uniform sampler2D mySampler;
+uniform sampler2D nSampler;
+
+float random (in vec2 st);
+float noise (in vec2 st);
+
+void main(){
+    vec2 xz = vec2(vPosition.x, vPosition.z);
+    float y = noise(xz);
+    vec4 wPos = TB*vPosition; // world position
+
+	gl_Position = VP*wPos;
+	gl_Position.z *= -1.0; // convert to Left Handed Coordinate System
+	gl_Position.y = -y/2.0-0.3;
+
+	fTexCoord = vTexCoord;
+	fPosition = vPosition;
+
+	//gl_Position = vPosition;
+
+}
+
+//the noise function from https://thebookofshaders.com/11/
+
+// 2D Random
+float random (in vec2 st) {
+    return fract(sin(dot(st.xy,
+                         vec2(12.9898,78.233)))
+                 * 43758.5453123);
+}
+
+// 2D Noise based on Morgan McGuire @morgan3d
+// https://www.shadertoy.com/view/4dS3Wd
+float noise (in vec2 st) {
+    vec2 i = floor(st);
+    vec2 f = fract(st);
+
+    // Four corners in 2D of a tile
+    float a = random(i);
+    float b = random(i + vec2(1.0, 0.0));
+    float c = random(i + vec2(0.0, 1.0));
+    float d = random(i + vec2(1.0, 1.0));
+
+    // Smooth Interpolation
+
+    // Cubic Hermine Curve.  Same as SmoothStep()
+    vec2 u = f*f*(3.0-2.0*f);
+    // u = smoothstep(0.,1.,f);
+
+    // Mix 4 coorners percentages
+    return mix(a, b, u.x) +
+            (c - a)* u.y * (1.0 - u.x) +
+            (d - b) * u.x * u.y;
+}
+
+</script>
+
+<script id="fragment-shader" type="x-shader/x-fragment">
+precision mediump float;
+
+uniform sampler2D mySampler;
+uniform sampler2D nSampler;
+
+uniform vec3 Ka, Kd, Ks, Ia, Id, Is, lightPosition, cameraPosition;
+uniform float shininess;
+
+varying vec2 fTexCoord;
+varying vec4 fPosition;
+
+
+vec4 computeColor(vec3 position, vec3 normal) {
+	// we are doing lighting in world coordinate frame
+
+	vec3 lightDir = normalize(lightPosition - position);
+	vec3 viewDir = normalize(cameraPosition - position);
+
+	vec3 ambient = Ia*Ka ;
+	vec3 diffuse = Id*Kd* max(0.0, dot(normal, lightDir));
+
+	vec3 halfVector = normalize(lightDir + viewDir);
+	vec3 specular = Is*Ks* pow( max(dot(halfVector, normal), 0.0), shininess);
+
+	vec3 color = ambient + diffuse + specular;
+
+	return vec4(color, 1.0);
+
+
+}
+
+void main(){
+    vec4 color = texture2D(mySampler,fTexCoord);
+    vec4 normal = texture2D(nSampler,fTexCoord);
+    //normal = normal*2.0 - 1.0;
+    gl_FragColor = computeColor(fPosition.xyz, normal.xyz)*color;
+    gl_FragColor = color;
+}
+</script>
+
+<script type="text/javascript" src="../Common/webgl-utils.js"></script>
+<script type="text/javascript" src="../Common/initShaders.js"></script>
+<script type="text/javascript" src="../Common/MV.js"></script>
+<script type="text/javascript" src="../Common/Utils/Camera2.js"></script>
+<script type="text/javascript" src="../Common/Utils/Trackball.js"></script>
+<script type="text/javascript" src="../Common/Utils/Utils.js"></script>
+<script type="text/javascript" src="MossTerrain.js"></script>
+</head>
+
+<body>
+<canvas id="gl-canvas" width="512" height="512">
+  HTML5 Canvas not supported!
+</canvas>
+</body>
+</html>
+
